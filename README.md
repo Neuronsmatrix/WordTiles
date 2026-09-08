@@ -69,3 +69,8 @@ The project includes pure Kotlin tests for decay, ordering, session isolation, a
 Live source checks confirmed an advanced entry with multiple meanings and relations. The original provisional provider, dictionaryapi.dev, timed out on that entry; the implemented default uses FreeDictionaryAPI.com instead.
 
 The initial implementation was built using temporary JDK/SDK/Gradle installations outside the project. Those machine-specific paths are not required by the project. Hardware-device testing is still needed before relying on the app for a long-term personal collection.
+
+
+## CI and releases
+
+GitHub Actions checks pull requests and pushes to `main`. Pushing a version tag such as `v0.2.0` publishes a signed APK after tests and lint pass; `PR-*` and release-candidate tags publish prereleases. See [CI/CD setup and signing](docs/ci-cd.md) for triggers, signing secrets, and versioning.
