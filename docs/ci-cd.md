@@ -56,8 +56,8 @@ printf '%s' android | gh secret set ANDROID_KEY_PASSWORD --repo Neuronsmatrix/Wo
 
 The Android version name comes from the tag (`v0.2.0` → `0.2.0`; `PR-123` → `PR-123`). The Android version code is `1000 + GITHUB_RUN_NUMBER`, so subsequent runs of this workflow create increasing codes above the initial local builds. Keep the workflow's run-number history; a renamed/recreated workflow may need a larger offset. Reruns of one run retain its code.
 
-Releases contain `WordTiles-<version>.apk` and a matching `.sha256` file, with automatically generated release notes. Prereleases do not become the Latest release. CI test/lint reports are retained for14 days and the intermediate signed bundle for7 days; published release assets remain attached to the release.
+Releases contain `WordTiles-<version>.apk` and a matching `.sha256` file, with automatically generated release notes. Prereleases do not become the Latest release. CI test/lint reports are retained for 14 days and the intermediate signed bundle for 7 days; published release assets remain attached to the release.
 
 Local builds retain their default version unless `WORDTILES_VERSION_NAME` and/or `WORDTILES_VERSION_CODE` are supplied. After installing a CI build, give any local replacement a version code at least as high as the installed one.
 
-For local signed release verification, set `ANDROID_SIGNING_STORE_FILE`, the three signing credential environment variables above, and run `./scripts/gradle-local :app:assembleRelease`. GitHub Releases distribute the APK directly; this pipeline does not upload to Google Play.
+For local signed release verification, set `ANDROID_SIGNING_STORE_FILE`, the three signing credential environment variables above, and run `./gradlew :app:assembleRelease` with JDK 17 and SDK 35 configured. GitHub Releases distribute the APK directly; this pipeline does not upload to Google Play.
