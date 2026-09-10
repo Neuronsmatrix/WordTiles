@@ -5,6 +5,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class StudySessionTest {
+    @Test fun `tapping twice returns to question without recording a review`() {
+        val session = StudySession(listOf(StudyCard("demolish", false)))
+        val answer = session.flip()
+        assertTrue(answer.revealed)
+        val question = answer.flip()
+        assertFalse(question.revealed)
+        assertEquals(0, question.rated)
+        assertThrows(IllegalStateException::class.java) { question.afterRating() }
+    }
+
     @Test fun `unrevealed card cannot be advanced and silently lost`() {
         val session = StudySession(listOf(StudyCard("demolish", true)))
         assertThrows(IllegalStateException::class.java) { session.afterRating() }

@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,7 +28,7 @@ fun NeighborhoodGraph(
     val rows = (shown.size + 1) / 2
     val height = maxOf(240, rows * 80 + 40).dp
     val edgeColor = MaterialTheme.colorScheme.outlineVariant
-    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(modifier = Modifier.testTag("neighborhood-graph"), shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         BoxWithConstraints(Modifier.fillMaxWidth().height(height).padding(12.dp)) {
             val w = maxWidth
             val h = maxHeight

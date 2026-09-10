@@ -1,0 +1,57 @@
+#!/bin/sh
+# Linux x86_64 bootstrap. Tools, downloads, preferences and caches remain in .toolchain/.
+set -eu
+WORDTILES_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+WORDTILES_TOOLS="$WORDTILES_ROOT/.toolchain"
+WORDTILES_SDK_SOURCE=${1:-${ANDROID_HOME:-"$HOME/Hidden/Android/SDK"}}
+case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) ;;
+    *) echo 'This bootstrap supports Linux x86_64. Other hosts can use Android Studio with JDK 17 and SDK 35.' >&2; exit 1 ;;
+esac
+mkdir -p "$WORDTILES_TOOLS/downloads" "$WORDTILES_TOOLS/android-user-home" "$WORDTILES_TOOLS/gradle-home"
+download() {
+    if [ ! -s "$2" ]; then
+        curl -fL --retry 2 --connect-timeout 20 --max-time 300 "$1" -o "$2.part"
+        mv "$2.part" "$2"
+    fi
+}
+if [ ! -x "$WORDTILES_TOOLS/jdk/bin/java" ]; then
+    download 'https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse' "$WORDTILES_TOOLS/downloads/jdk17.tar.gz"
+    mkdir -p "$WORDTILES_TOOLS/jdk"
+    tar -xzf "$WORDTILES_TOOLS/downloads/jdk17.tar.gz" -C "$WORDTILES_TOOLS/jdk" --strip-components=1
+fi
+export JAVA_HOME="$WORDTILES_TOOLS/jdk"
+export ANDROID_HOME="$WORDTILES_TOOLS/android-sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export ANDROID_USER_HOME="$WORDTILES_TOOLS/android-user-home"
+export GRADLE_USER_HOME="$WORDTILES_TOOLS/gradle-home"
+# Reuse installed components before asking sdkmanager for anything missing.
+mkdir -p "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+if [ "$WORDTILES_SDK_SOURCE" != "$ANDROID_HOME" ]; then
+    for component in licenses platform-tools platforms/android-35 build-tools/35.0.0; do
+        if [ -d "$WORDTILES_SDK_SOURCE/$component" ] && [ ! -d "$ANDROID_HOME/$component" ]; then
+            cp -a "$WORDTILES_SDK_SOURCE/$component" "$ANDROID_HOME/$component"
+        fi
+    done
+fi
+if [ ! -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+    download 'https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip' "$WORDTILES_TOOLS/downloads/android-tools.zip"
+    mkdir -p "$ANDROID_HOME/cmdline-tools"
+    unzip -qo "$WORDTILES_TOOLS/downloads/android-tools.zip" -d "$ANDROID_HOME/cmdline-tools"
+    mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+fi
+# Reuse the existing developer signing identity so a v1 installation can be updated.
+if [ ! -f "$ANDROID_USER_HOME/debug.keystore" ] && [ -f "$HOME/.android/debug.keystore" ]; then
+    cp "$HOME/.android/debug.keystore" "$ANDROID_USER_HOME/debug.keystore"
+    chmod 600 "$ANDROID_USER_HOME/debug.keystore"
+fi
+set --
+[ -f "$ANDROID_HOME/platforms/android-35/android.jar" ] || set -- "$@" 'platforms;android-35'
+[ -x "$ANDROID_HOME/build-tools/35.0.0/aapt2" ] || set -- "$@" 'build-tools;35.0.0'
+[ -x "$ANDROID_HOME/platform-tools/adb" ] || set -- "$@" 'platform-tools'
+if [ "$#" -gt 0 ]; then
+    yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "$@"
+fi
+printf 'sdk.dir=%s\n' "$ANDROID_HOME" > "$WORDTILES_ROOT/local.properties"
+"$WORDTILES_ROOT/scripts/gradle-local" --version
+echo 'Toolchain ready in .toolchain/. Build with ./scripts/gradle-local :app:assembleDebug'

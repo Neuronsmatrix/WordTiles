@@ -1,6 +1,8 @@
 package com.wordtiles.data
 
 import android.content.Context
+import android.content.ContentValues
+import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import com.wordtiles.core.Definition
 import com.wordtiles.core.Meaning
@@ -94,6 +96,96 @@ class WordStoreTest {
             assertFalse("seek out" in store.excluded())
             assertEquals(setOf("retain"), store.excluded())
         }
+    }
+
+    @Test
+    fun `version one migration preserves legacy data and saves only studied words`() {
+        val cachedOnly = entry("cached", "Available offline.").copy(rawResponse = "cached raw")
+        val studied = entry("studied", "Previously rated.").copy(rawResponse = "studied raw")
+        createVersionOneDatabase(cachedOnly, studied)
+
+        WordStore(context).use { migrated ->
+            assertEquals(setOf("cached", "studied"), migrated.entries().keys)
+            assertEquals("cached raw", migrated.entries().getValue("cached").rawResponse)
+            assertEquals("studied raw", migrated.entries().getValue("studied").rawResponse)
+            assertEquals(Progress("studied", 20.0, 1234L, 3), migrated.progress().getValue("studied"))
+            assertEquals(setOf("cached"), migrated.excluded())
+            assertEquals(mapOf("studied" to CollectionMark(saved = true)), migrated.collection())
+        }
+    }
+
+    @Test
+    fun `saved and starred flags toggle independently and survive reopening`() {
+        WordStore(context).use { store ->
+            store.saveEntry(entry("  Seek  Out ", "Find after searching."))
+            store.setSaved("SEEK OUT", true)
+            store.setStarred(" seek\tout ", true)
+            store.setSaved("seek out", false)
+            assertEquals(CollectionMark(starred = true), store.collection().getValue("seek out"))
+        }
+
+        WordStore(context).use { reopened ->
+            assertEquals(CollectionMark(starred = true), reopened.collection().getValue("seek out"))
+            reopened.setStarred("seek out", false)
+            assertEquals(emptyMap<String, CollectionMark>(), reopened.collection())
+        }
+    }
+
+    @Test
+    fun `adding a collection mark requires a cached entry`() {
+        WordStore(context).use { store ->
+            try {
+                store.setSaved("missing", true)
+                throw AssertionError("a missing cached entry must not be added to collection")
+            } catch (_: IllegalArgumentException) {
+                // Expected: only cached dictionary entries can be explicitly collected.
+            }
+            assertEquals(emptyMap<String, CollectionMark>(), store.collection())
+        }
+    }
+
+    @Test
+    fun `daily topic selection survives closing and reopening`() {
+        val selection = DailyTopics(
+            day = "2026-09-07",
+            topicIds = listOf("rhetoric", "systems", "inquiry"),
+        )
+        WordStore(context).use { store ->
+            assertEquals(null, store.dailyTopics())
+            store.saveDailyTopics(selection)
+        }
+
+        WordStore(context).use { reopened ->
+            assertEquals(selection, reopened.dailyTopics())
+        }
+    }
+
+    private fun createVersionOneDatabase(cachedOnly: WordEntry, studied: WordEntry) {
+        val database = context.openOrCreateDatabase(WordStore.DATABASE_NAME, Context.MODE_PRIVATE, null)
+        database.execSQL(
+            "CREATE TABLE entries (word TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL)",
+        )
+        database.execSQL(
+            "CREATE TABLE progress (word TEXT PRIMARY KEY NOT NULL, strength REAL NOT NULL, rated_at INTEGER NOT NULL, reviews INTEGER NOT NULL DEFAULT 1)",
+        )
+        database.execSQL("CREATE TABLE excluded (word TEXT PRIMARY KEY NOT NULL)")
+        database.insertOrThrow("entries", null, entryValues(cachedOnly))
+        database.insertOrThrow("entries", null, entryValues(studied))
+        database.execSQL(
+            "INSERT INTO progress(word, strength, rated_at, reviews) VALUES (?, ?, ?, ?)",
+            arrayOf("studied", 20.0, 1234L, 3),
+        )
+        database.execSQL("INSERT INTO excluded(word) VALUES (?)", arrayOf("cached"))
+        database.version = 1
+        database.close()
+    }
+
+    private fun entryValues(entry: WordEntry) = ContentValues().apply {
+        put("word", entry.word)
+        put(
+            "payload",
+            """{"word":"${entry.word}","meanings":[{"partOfSpeech":"adjective","definitions":[{"text":"${entry.meanings.single().definitions.single().text}"}]}],"rawResponse":"${entry.rawResponse}"}""",
+        )
     }
 
     private fun entry(word: String, definition: String) = WordEntry(

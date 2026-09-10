@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+WORDTILES_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+export JAVA_HOME="$WORDTILES_ROOT/.toolchain/jdk"
+export ANDROID_HOME="$WORDTILES_ROOT/.toolchain/android-sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export ANDROID_USER_HOME="$WORDTILES_ROOT/.toolchain/android-user-home"
+export GRADLE_USER_HOME="$WORDTILES_ROOT/.toolchain/gradle-home"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+if [ ! -x "$JAVA_HOME/bin/java" ] || [ ! -d "$ANDROID_HOME/platforms/android-35" ]; then
+    echo 'Project toolchain is missing. Run ./scripts/setup-toolchain first.' >&2
+    exit 1
+fi
+cd "$WORDTILES_ROOT"
+exec ./gradlew "$@"

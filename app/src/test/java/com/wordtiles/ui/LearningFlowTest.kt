@@ -3,6 +3,7 @@ package com.wordtiles.ui
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.wordtiles.MainActivity
@@ -50,17 +51,21 @@ class LearningFlowTest {
     fun revealSurvivesRotationAndRatingPersistsTheWholeWord() {
         awaitExplore()
         capture("explore")
-        compose.onAllNodesWithText("Rhetoric & Argument").onFirst().performClick()
+        openRhetoricTopic()
         capture("topic")
         scrollToText("Pure learn · 2 new").performClick()
-        compose.onNodeWithText("1 · Unsure").assertDoesNotExist()
-        compose.onNodeWithText("Reveal all meanings").performClick()
-        scrollToText("1. Clear and convincing.").assertExists()
-        compose.onNodeWithText("2. Compelling the mind to assent.").assertExists()
+        compose.onNodeWithText("5").assertIsNotEnabled()
+        assertEquals("Reveal meanings", compose.onNodeWithTag("study-card").fetchSemanticsNode().config[SemanticsActions.OnClick].label)
+        compose.onNodeWithTag("study-card").performClick()
+        assertEquals("Show word", compose.onNodeWithTag("study-card").fetchSemanticsNode().config[SemanticsActions.OnClick].label)
+        compose.onNodeWithText("1. Clear and convincing.", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("2. Compelling the mind to assent.", useUnmergedTree = true).assertExists()
 
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("Reveal all meanings").assertDoesNotExist()
-        scrollToText("5").performClick()
+        compose.onNodeWithText("5").assertIsEnabled().assertIsDisplayed()
+        assertTrue(compose.onNodeWithText("5").fetchSemanticsNode().boundsInRoot.top <
+            compose.onNodeWithTag("study-card").fetchSemanticsNode().boundsInRoot.top)
+        compose.onNodeWithText("5").performClick()
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("equivocal").fetchSemanticsNodes().isNotEmpty()
         }
@@ -79,7 +84,7 @@ class LearningFlowTest {
 
     @Test fun skippingNeverEnrollsTheNewWord() {
         awaitExplore()
-        compose.onAllNodesWithText("Rhetoric & Argument").onFirst().performClick()
+        openRhetoricTopic()
         scrollToText("Pure learn · 2 new").performClick()
         scrollToText("Skip for this session").performClick()
         compose.onNodeWithText("equivocal").assertIsDisplayed()
@@ -105,6 +110,63 @@ class LearningFlowTest {
         }
     }
 
+    @Test fun exploreHasDailySuggestionsAndGraphIsASeparateTab() {
+        awaitExplore()
+        compose.onNodeWithText("TODAY'S 10 TOPICS").assertExists()
+        compose.onNodeWithTag("neighborhood-graph").assertDoesNotExist()
+        WordStore(ApplicationProvider.getApplicationContext()).use { store ->
+            assertEquals(10, store.dailyTopics()!!.topicIds.size)
+            assertTrue(store.collection().isEmpty())
+        }
+        compose.onNodeWithText("Graph").performClick()
+        compose.onNodeWithTag("neighborhood-graph").assertExists()
+    }
+
+    @Test fun typoSearchSuggestsPhraseWithoutAddingItToCollection() {
+        awaitExplore()
+        lateinit var model: WordTilesViewModel
+        compose.runOnIdle { model = androidx.lifecycle.ViewModelProvider(compose.activity)[WordTilesViewModel::class.java] }
+        compose.onNodeWithText("A word or phrase").performTextInput("loook for")
+        compose.onNodeWithText("Find").performClick()
+        compose.waitUntil(20_000) {
+            compose.waitForIdle()
+            !model.state.value.searching
+        }
+        assertTrue(model.state.value.searchError.orEmpty(), "look for" in model.state.value.suggestions)
+        scrollToText("look for").assertIsDisplayed()
+        WordStore(ApplicationProvider.getApplicationContext()).use { store -> assertTrue(store.collection().isEmpty()) }
+    }
+
+    @Test fun collectionRequiresSaveOrStarAndStarSurvivesRemovingSave() {
+        awaitExplore()
+        compose.onNodeWithText("Collection").performClick()
+        scrollToText("Room to grow.").assertIsDisplayed()
+        openRhetoricTopic()
+        scrollToText("cogent").performClick()
+        scrollToText("Save word").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Saved").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("☆ Star word").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("★ Starred").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Saved").performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Save word").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Collection").performClick()
+        scrollToText("Starred").performClick()
+        scrollToText("cogent").assertIsDisplayed()
+        scrollToText("Saved").performClick()
+        scrollToText("Room to grow.").assertIsDisplayed()
+        WordStore(ApplicationProvider.getApplicationContext()).use { store ->
+            assertTrue(store.collection().getValue("cogent").starred)
+            assertTrue(!store.collection().getValue("cogent").saved)
+            assertTrue(store.progress().isEmpty())
+        }
+    }
+
+    private fun openRhetoricTopic() {
+        compose.onNodeWithText("Graph").performClick()
+        scrollToText("Rhetoric & Argument").performClick()
+        scrollToText("Open topic").performClick()
+    }
+
     private fun scrollToText(text: String): SemanticsNodeInteraction {
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(text))
         return compose.onNodeWithText(text)
@@ -125,7 +187,8 @@ class LearningFlowTest {
 
     private fun awaitExplore() {
         compose.waitUntil(10_000) {
-            compose.onAllNodesWithText("Follow your curiosity.").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Follow your curiosity.").fetchSemanticsNodes().isNotEmpty() &&
+                WordStore(ApplicationProvider.getApplicationContext()).use { it.dailyTopics() != null }
         }
     }
 }

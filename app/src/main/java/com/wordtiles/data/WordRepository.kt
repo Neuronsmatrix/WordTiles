@@ -5,7 +5,9 @@ import com.wordtiles.core.Progress
 import com.wordtiles.core.WordEntry
 import com.wordtiles.core.canonicalWord
 import com.wordtiles.core.rate
+import com.wordtiles.core.selectDailyTopicIds
 import java.io.Closeable
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -19,6 +21,8 @@ data class Snapshot(
     val entries: Map<String, WordEntry>,
     val progress: Map<String, Progress>,
     val excluded: Set<String>,
+    val collection: Map<String, CollectionMark> = emptyMap(),
+    val dailyTopics: DailyTopics? = null,
 )
 
 class WordRepository private constructor(
@@ -56,6 +60,8 @@ class WordRepository private constructor(
                 entries = store.entries(),
                 progress = store.progress(),
                 excluded = store.excluded(),
+                collection = store.collection(),
+                dailyTopics = store.dailyTopics(),
             )
         }
     }
@@ -94,8 +100,43 @@ class WordRepository private constructor(
                 nowMillis = nowMillis(),
                 previous = store.progress()[key],
             )
-            store.saveProgress(updated)
+            store.saveProgressAndSetSaved(updated)
             updated
+        }
+    }
+
+    suspend fun setSaved(word: String, saved: Boolean) = withContext(ioDispatcher) {
+        val key = canonicalKey(word)
+        storeMutex.withLock {
+            ensureOpen()
+            store.setSaved(key, saved)
+        }
+    }
+
+    suspend fun setStarred(word: String, starred: Boolean) = withContext(ioDispatcher) {
+        val key = canonicalKey(word)
+        storeMutex.withLock {
+            ensureOpen()
+            store.setStarred(key, starred)
+        }
+    }
+
+    suspend fun dailyTopics(day: LocalDate): DailyTopics = withContext(ioDispatcher) {
+        storeMutex.withLock {
+            ensureOpen()
+            val dayString = day.toString()
+            val stored = store.dailyTopics()
+            if (stored?.day == dayString) return@withLock stored
+
+            var selected = selectDailyTopicIds(
+                day = day,
+                topicIds = Catalog.topics.map { it.id },
+                count = DAILY_TOPIC_COUNT,
+            )
+            if (stored != null && selected == stored.topicIds) {
+                selected = selected.drop(1) + selected.first()
+            }
+            DailyTopics(day = dayString, topicIds = selected).also(store::saveDailyTopics)
         }
     }
 
@@ -124,5 +165,9 @@ class WordRepository private constructor(
 
     private fun ensureOpen() {
         check(!closed) { "WordRepository is closed." }
+    }
+
+    private companion object {
+        const val DAILY_TOPIC_COUNT = 10
     }
 }

@@ -14,6 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wordtiles.data.Catalog
 import com.wordtiles.ui.*
@@ -35,10 +38,26 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun WordTilesApp(viewModel: WordTilesViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val activeTab = when {
+        state.page is Page.Graph -> "Graph"
+        state.page == Page.Quiz -> "Practice"
+        state.pages.first() is Page.Graph -> "Graph"
+        state.pages.first() == Page.Collection -> "Collection"
+        state.pages.first() == Page.Quiz -> "Practice"
+        else -> "Explore"
+    }
     val snackbar = remember { SnackbarHostState() }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshDailyTopics()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(state.page, state.progress) {
-        while (true) { now = System.currentTimeMillis(); delay(60_000) }
+        while (true) { now = System.currentTimeMillis(); viewModel.refreshDailyTopics(); delay(60_000) }
     }
     LaunchedEffect(state.message) {
         state.message?.let { message ->
@@ -59,11 +78,13 @@ private fun WordTilesApp(viewModel: WordTilesViewModel) {
         },
         bottomBar = {
             if (state.page != Page.Study) NavigationBar {
-                NavigationBarItem(selected = state.pages.first() == Page.Explore,
-                    onClick = { viewModel.switchTab(Page.Explore) }, icon = { Text("◎") }, label = { Text("Explore") })
-                NavigationBarItem(selected = state.pages.first() == Page.Collection,
+                NavigationBarItem(selected = activeTab == "Explore",
+                    onClick = { viewModel.switchTab(Page.Explore) }, icon = { Text("✦") }, label = { Text("Explore") })
+                NavigationBarItem(selected = activeTab == "Collection",
                     onClick = { viewModel.switchTab(Page.Collection) }, icon = { Text("▤") }, label = { Text("Collection") })
-                NavigationBarItem(selected = state.pages.first() == Page.Quiz,
+                NavigationBarItem(selected = activeTab == "Graph",
+                    onClick = { viewModel.switchTab(Page.Graph()) }, icon = { Text("◎") }, label = { Text("Graph") })
+                NavigationBarItem(selected = activeTab == "Practice",
                     onClick = { viewModel.switchTab(Page.Quiz) }, icon = { Text("◇") }, label = { Text("Practice") })
             }
         },
@@ -75,6 +96,7 @@ private fun WordTilesApp(viewModel: WordTilesViewModel) {
                     when (val page = state.page) {
                         Page.Explore -> ExploreScreen(state, viewModel, now)
                         Page.Collection -> CollectionScreen(state, viewModel, now)
+                        is Page.Graph -> GraphScreen(page, state, viewModel, now)
                         is Page.TopicDetail -> Catalog.topics.find { it.id == page.id }?.let { TopicScreen(it, state, viewModel, now) }
                         is Page.Entry -> EntryScreen(page.word, state, viewModel, now)
                         Page.Study -> key(state.session?.index) { StudyScreen(state, viewModel) }

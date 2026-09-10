@@ -7,12 +7,14 @@ import org.junit.Test
 
 class CatalogTest {
     @Test
-    fun `starter catalog has eight substantial advanced topics and intentional overlap`() {
-        assertTrue(Catalog.topics.size >= 8)
+    fun `catalog has enough substantial advanced topics for daily rotation`() {
+        assertTrue(Catalog.topics.size >= 20)
+        assertEquals(Catalog.topics.size, Catalog.topics.map { it.id }.toSet().size)
         assertTrue(Catalog.topics.all { it.words.size >= 10 })
         assertTrue(Catalog.topics.flatMap { it.words }.all { it == canonicalWord(it) })
         val memberships = Catalog.topics.flatMap { it.words }.groupingBy { it }.eachCount()
         assertTrue(memberships.values.any { it > 1 })
+        assertTrue(listOf("look for", "get away", "tear down").all { it in memberships })
     }
 
     @Test

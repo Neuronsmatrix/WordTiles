@@ -1,0 +1,17 @@
+WordNet 3.0 search lexicon
+
+Source: Princeton University WordNet 3.0 database archive
+Source URL: https://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
+Retrieved: 2026-09-07
+Input files: dict/index.noun, dict/index.verb, dict/index.adj, dict/index.adv
+
+Derivation: scripts/build-search-lexicon.py reads the lemma field from every
+non-header index record, changes underscores to spaces, removes duplicates,
+sorts the UTF-8 headwords, and writes gzip with timestamp zero. The bundled
+file contains headwords only; it contains no WordNet definitions or relations.
+
+License: WordNet 3.0 license, reproduced in LICENSE.txt beside the data and in
+licenses/wordnet-license.txt in the repository.
+
+Packaging note: the .gzip suffix preserves the compressed payload during Android
+asset merging; the .gz suffix is automatically expanded and renamed by AGP.

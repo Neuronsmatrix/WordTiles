@@ -5,5 +5,7 @@ local.properties
 *.iml
 .kotlin/
 .superpowers/
+.toolchain/
 *.jks
 *.keystore
+__pycache__/

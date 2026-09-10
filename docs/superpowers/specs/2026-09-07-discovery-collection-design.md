@@ -1,0 +1,18 @@
+# Discovery and collection update
+
+User-authorized changes to the existing Android app, 2026-09-07. No pictures in this update.
+
+## Behavior
+
+- Keep the Linux JDK17, Android SDK35, Gradle distributions/caches, and Android tool preferences in project-local `.toolchain/`, ignored by git. The previous `/tmp` installation has already disappeared after reboot; recreate it locally. Supply repeatable setup and build scripts, preserving the existing debug signing key so the new APK can update the installed app. Do not change the user's global environment.
+- Explore shows ten distinct daily topic suggestions, stable for the local calendar day and app restarts. Rotate tomorrow. Expand the local topic catalogue beyond ten. Suggestions are metadata, never automatically added to Collection or fetched. A separately selected topic can be downloaded for offline study. The wording “topics” is used literally unless the pending optional clarification says otherwise.
+- Add a Graph navigation tab for the overview graph and future expansion. Explore contains no graph. Topic/detail neighborhoods can remain accessible; navigation into the graph is explicit.
+- Collection contains explicitly saved or starred words only, with Saved and Starred filters (a starred-only word still belongs to the collection). Cache membership is independent from collection membership. Existing studied words migrate to Saved; previously merely downloaded entries remain a cache. Save/star actions retain entries offline but do not change confidence. Rating a word explicitly adds it to Saved and keeps existing star state. Removing both marks removes it from collection review without deleting its cached entry or history.
+- Collection Review includes saved/starred unreviewed words too; tapping a Collection row opens its dictionary details with save/star controls. The Review action launches cards. A review card flips when tapped, reveals every meaning, and flips back on another tap. Confidence buttons sit above the meanings, visible immediately after reveal and disabled while saving. A visible tap hint, accessibility click label, and restrained flip animation provide visual feedback. Rating still requires the answer face; session cooldown and decay remain unchanged.
+- Find shows typo-tolerant suggestions for words and phrases on device, including `loook for` → `look for`. Suggestions are selectable, not silently autocorrected. Search covers a bundled, licensed dictionary headword list plus cached words/catalogue/relations; it is not restricted to the small starter catalogue. Normalization, insertion/deletion/substitution/transposition, prefix completion, and multiple spaces are supported. Local search is debounced, bounded, and ignores stale results. Empty or nonsense searches show clear empty states and preserve explicit exact lookup.
+
+## Data and verification
+
+Add a non-destructive SQLite v2 migration for save/star flags and the daily topic selection. Preserve all existing entries, raw responses, sources, confidence, and exclusions. Store the chosen day plus topic IDs separately from words. Perform storage, lexicon loading, and search off the UI thread. Refresh the day at launch/resume and while app remains open past midnight.
+
+Test v1 migration, independent saved/starred flags, daily stability/rollover, no auto-enrollment from suggestions/cache, review eligibility, fuzzy spelling/phrases, stale query handling, tap-to-flip and top confidence controls. Run the full JVM/Robolectric suite, APK build, and lint using the local toolchain. Keep provider attribution and legacy test coverage. Update version to 0.2.0/code2 and README; deliver an APK.

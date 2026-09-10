@@ -14,6 +14,8 @@ data class StudySession(
 
     fun reveal(): StudySession = if (finished) this else copy(revealed = true)
 
+    fun flip(): StudySession = if (finished) this else copy(revealed = !revealed)
+
     fun afterRating(): StudySession {
         check(revealed && !finished) { "Reveal the current word before rating it." }
         return copy(index = index + 1, revealed = false, rated = rated + 1)

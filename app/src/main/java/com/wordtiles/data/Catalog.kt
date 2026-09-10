@@ -84,6 +84,114 @@ object Catalog {
                 "pluralism", "salient", "tacit", "vested interest", "zeitgeist",
             ),
         ),
+        Topic(
+            id = "language-change",
+            title = "Language & Change",
+            subtitle = "Trace how expressions emerge, spread, and shift",
+            words = listOf(
+                "coinage", "colloquial", "etymology", "idiomatic", "lexicon",
+                "neologism", "semantic drift", "vernacular", "obsolete", "polysemy",
+            ),
+        ),
+        Topic(
+            id = "causation",
+            title = "Cause & Consequence",
+            subtitle = "Separate origins, mechanisms, and downstream effects",
+            words = listOf(
+                "antecedent", "catalyst", "causal", "concomitant", "contingent",
+                "corollary", "mediate", "precipitate", "ramification", "repercussion",
+            ),
+        ),
+        Topic(
+            id = "negotiation",
+            title = "Negotiation & Accord",
+            subtitle = "Navigate concessions, disputes, and durable agreements",
+            words = listOf(
+                "accede", "arbitrate", "broker", "compromise", "concession",
+                "impasse", "mediate", "proviso", "reconcile", "stipulate",
+            ),
+        ),
+        Topic(
+            id = "perception",
+            title = "Perception & Attention",
+            subtitle = "Describe noticing, interpreting, and overlooking",
+            words = listOf(
+                "attentive", "discern", "discriminate", "inattentional", "intuitive",
+                "perceptible", "salient", "sensory", "subliminal", "vigilant",
+            ),
+        ),
+        Topic(
+            id = "emotion",
+            title = "Emotion & Temperament",
+            subtitle = "Name subtle moods, impulses, and dispositions",
+            words = listOf(
+                "ambivalent", "equanimity", "exuberant", "indignant", "melancholy",
+                "reticent", "sanguine", "solicitous", "stoic", "trepidation",
+            ),
+        ),
+        Topic(
+            id = "time-planning",
+            title = "Time & Planning",
+            subtitle = "Reason about sequence, urgency, and long horizons",
+            words = listOf(
+                "contingency", "defer", "expedite", "imminent", "interim",
+                "protracted", "retrospective", "simultaneous", "tentative", "trajectory",
+            ),
+        ),
+        Topic(
+            id = "research-writing",
+            title = "Research & Writing",
+            subtitle = "Build precise arguments from sources and observations",
+            words = listOf(
+                "annotate", "bibliography", "corpus", "explicate", "methodology",
+                "paraphrase", "qualify", "synthesize", "thesis", "triangulate",
+            ),
+        ),
+        Topic(
+            id = "search-navigation",
+            title = "Search & Navigation",
+            subtitle = "Phrases for locating, following, and reaching a target",
+            words = listOf(
+                "come across", "home in on", "look for", "map out", "narrow down",
+                "seek out", "track down", "trace back", "zero in on", "wayfinding",
+            ),
+        ),
+        Topic(
+            id = "escape-resilience",
+            title = "Escape & Resilience",
+            subtitle = "Describe evasion, recovery, and resistance under pressure",
+            words = listOf(
+                "break free", "bounce back", "circumvent", "elude", "endure",
+                "get away", "persevere", "rebound", "withstand", "weather",
+            ),
+        ),
+        Topic(
+            id = "construction-change",
+            title = "Construction & Change",
+            subtitle = "Build, revise, dismantle, and replace structures",
+            words = listOf(
+                "assemble", "build up", "consolidate", "dismantle", "erect",
+                "retrofit", "shore up", "tear down", "transform", "undermine",
+            ),
+        ),
+        Topic(
+            id = "economics",
+            title = "Economics & Incentives",
+            subtitle = "Discuss scarcity, exchange, risk, and market behavior",
+            words = listOf(
+                "arbitrage", "externality", "fungible", "liquidity", "marginal",
+                "opportunity cost", "scarcity", "subsidize", "trade-off", "volatile",
+            ),
+        ),
+        Topic(
+            id = "governance",
+            title = "Governance & Policy",
+            subtitle = "Examine mandates, institutions, and public decisions",
+            words = listOf(
+                "accountability", "bureaucratic", "constituency", "deliberative", "mandate",
+                "oversight", "precedent", "ratify", "regulatory", "transparent",
+            ),
+        ),
     )
 
     val quizzes: List<QuizQuestion> = listOf(

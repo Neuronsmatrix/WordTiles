@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.wordtiles.core.Definition
 import com.wordtiles.core.Meaning
 import com.wordtiles.core.WordEntry
+import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,9 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -45,6 +49,7 @@ class WordRepositoryTest {
             assertEquals(first, second)
             assertEquals(listOf("seek out"), provider.requests)
             assertEquals(first, repository.snapshot().entries.getValue("seek out"))
+            assertEquals(emptyMap<String, CollectionMark>(), repository.snapshot().collection)
         }
     }
 
@@ -70,6 +75,8 @@ class WordRepositoryTest {
         var now = 1_000L
         val provider = FakeProvider(entry("liminal", "At a threshold."))
         WordRepository(context, provider, { now }, Dispatchers.Unconfined).use { repository ->
+            repository.lookup("liminal")
+            repository.setStarred("liminal", true)
             assertEquals(1, repository.rateWord(" LIMINAL ", 2).reviews)
             now = 2_000L
             val updated = repository.rateWord("liminal", 4)
@@ -79,9 +86,48 @@ class WordRepositoryTest {
             assertEquals(40.0, updated.strength, 0.0)
             assertEquals(2_000L, updated.ratedAtMillis)
             assertEquals(setOf("liminal"), repository.snapshot().excluded)
+            assertEquals(CollectionMark(saved = true, starred = true), repository.snapshot().collection.getValue("liminal"))
 
             repository.excludeWord("liminal", false)
             assertEquals(emptySet<String>(), repository.snapshot().excluded)
+        }
+    }
+
+    @Test
+    fun `repository toggles collection flags without changing progress`() = runTest {
+        val provider = FakeProvider(entry("abstruse", "Difficult to understand."))
+        WordRepository(context, provider, { 100L }, Dispatchers.Unconfined).use { repository ->
+            repository.lookup("abstruse")
+            repository.setSaved(" ABSTRUSE ", true)
+            repository.setStarred("abstruse", true)
+            repository.setSaved("abstruse", false)
+
+            val snapshot = repository.snapshot()
+            assertEquals(CollectionMark(starred = true), snapshot.collection.getValue("abstruse"))
+            assertEquals(emptyMap<String, com.wordtiles.core.Progress>(), snapshot.progress)
+        }
+    }
+
+    @Test
+    fun `daily topics are stable for a day and refresh on the next local date`() = runTest {
+        val provider = FakeProvider(entry("unused", "Unused."))
+        WordRepository(context, provider, { 100L }, Dispatchers.Unconfined).use { repository ->
+            val first = repository.dailyTopics(LocalDate.of(2026, 9, 7))
+            val repeated = repository.dailyTopics(LocalDate.of(2026, 9, 7))
+            val nextDay = repository.dailyTopics(LocalDate.of(2026, 9, 8))
+
+            assertEquals(first, repeated)
+            assertEquals("2026-09-07", first.day)
+            assertEquals(10, first.topicIds.size)
+            assertEquals(10, first.topicIds.toSet().size)
+            assertTrue(first.topicIds.all { id -> Catalog.topics.any { it.id == id } })
+            assertEquals("2026-09-08", nextDay.day)
+            assertNotEquals(first.topicIds, nextDay.topicIds)
+            assertEquals(0, provider.requests.size)
+            val snapshot = repository.snapshot()
+            assertEquals(nextDay, snapshot.dailyTopics)
+            assertEquals(emptyMap<String, WordEntry>(), snapshot.entries)
+            assertEquals(emptyMap<String, CollectionMark>(), snapshot.collection)
         }
     }
 

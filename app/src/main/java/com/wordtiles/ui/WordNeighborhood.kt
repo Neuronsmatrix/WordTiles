@@ -28,7 +28,10 @@ fun WordNeighborhood(entry: WordEntry, state: AppState, now: Long, onWord: (Stri
             }
         }
     }
-    if (groups.isEmpty()) return
+    if (groups.isEmpty()) {
+        Text("This entry has no synonym or opposite links yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
     var selected by rememberSaveable(entry.word) { mutableIntStateOf(0) }
     var page by rememberSaveable(entry.word, selected) { mutableIntStateOf(0) }
     val group = groups[selected.coerceIn(groups.indices)]

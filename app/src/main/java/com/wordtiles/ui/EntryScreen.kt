@@ -31,11 +31,21 @@ fun EntryScreen(word: String, state: AppState, viewModel: WordTilesViewModel, no
             OutlinedButton(onClick = { viewModel.openWord(word, true) }) { Text("Retry lookup") }
         } }
         if (entry != null) {
-            item { WordNeighborhood(entry, state, now, viewModel::openWord) }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilterChip(selected = state.collection[word]?.saved == true, enabled = !state.saving,
+                        onClick = { viewModel.toggleSaved(word) }, label = { Text(if (state.collection[word]?.saved == true) "Saved" else "Save word") })
+                    FilterChip(selected = state.collection[word]?.starred == true, enabled = !state.saving,
+                        onClick = { viewModel.toggleStarred(word) }, label = { Text(if (state.collection[word]?.starred == true) "★ Starred" else "☆ Star word") })
+                }
+                RatingButtons(!state.saving) { rating -> viewModel.rateEntry(word, rating) }
+            }
             item { EntryBody(entry, viewModel::openWord) }
             item {
-                RatingButtons(!state.saving) { rating -> viewModel.rateEntry(word, rating) }
-                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { viewModel.navigate(Page.Graph(word = word)) }) { Text("View connections graph") }
+            }
+            item {
+
                 OutlinedButton(onClick = { viewModel.toggleExcluded(word) }, enabled = !state.saving,
                     modifier = Modifier.fillMaxWidth()) {
                     Text(if (word in state.excluded) "Include in study again" else "Exclude from study")
